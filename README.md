@@ -103,7 +103,19 @@ async def my_handler(event: Any) -> None:
 core.onMessage(my_handler, pattern=r"^/hello(\s|$)")
 ```
 
-Available event wrappers: `onMessage`, `onEdit`, `onDelete`, `onRead`, `onCallback`, `onInline`, `onChatAction`, `onUserUpdate`, `onRaw`.
+### Event Wrappers
+ 
+| Wrapper | `pattern` arg | Trigger condition |
+|---------|:-------------:|-------------------|
+| `onMessage(func, pattern)` | ✅ | A new message is received |
+| `onEdit(func, pattern)` | ✅ | A message is edited |
+| `onDelete(func)` | ❌ | A message is deleted - only `deleted_id`/`deleted_ids` available, no content |
+| `onRead(func)` | ❌ | Messages are marked as read |
+| `onCallback(func, pattern)` | ✅ | An inline keyboard button is pressed |
+| `onInline(func, pattern)` | ✅ | An inline query is sent (`@yourbot something`) |
+| `onChatAction(func)` | ❌ | A chat action occurs (join, leave, title change, pin, etc.) |
+| `onUserUpdate(func)` | ❌ | A user update occurs (typing indicator, online status, etc.) |
+| `onRaw(func)` | ❌ | Any raw Telegram `Update` object - unabstracted, last resort |
 
 ## Bot Commands
 
@@ -118,4 +130,4 @@ Commands are registered with Telegram automatically on startup.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
