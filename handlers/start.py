@@ -1,25 +1,27 @@
-from telethon import events
+from typing import Any
 
-def register(bot):
-    @bot.on(events.NewMessage(pattern='/start'))
-    async def start_handler(event):
-        # if in pms
-        if event.is_private:
-            await event.reply(
-f"""
-This is a placeholder text for /start command in pm's.
-""",
-parse_mode="markdown")
-        # if in a group
-        elif event.is_group:
-            await event.reply(
-f"""
-This is a placeholder text for /start command in groups.
-""",
-parse_mode="markdown")
-        elif event.is_channel:
-            await event.reply(
-f"""
-This is a placeholder text for /start command in channels.
-""",
-parse_mode="markdown")
+from loguru import logger
+
+import core
+
+
+async def start_handler(event: Any) -> None:
+    """Handle /start command from users.
+
+    Args:
+        event: The event object from telethon containing message details
+    """
+    logger.debug(f"Start handler triggered by user: {event.sender_id}")
+    try:
+        logger.debug("Sending start response message")
+        await event.reply("meow meow mrow...")
+        logger.debug(
+            f"Successfully replied to start command from user: {event.sender_id}"
+        )
+    except Exception as e:
+        logger.error(f"Error in start_handler: {e}")
+        raise
+
+
+core.onMessage(start_handler, pattern=r"^/start(\s|$)")
+logger.debug("Start handler successfully registered")
