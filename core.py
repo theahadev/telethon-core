@@ -15,7 +15,7 @@ import sys
 from typing import Any, Callable, Dict, Optional
 
 from loguru import logger
-from telethon import TelegramClient, events
+from telethon import TelegramClient, events, functions, types
 
 bot: Optional[TelegramClient] = None
 data: Optional[Dict[str, Any]] = None
@@ -89,6 +89,49 @@ def onRaw(func: Callable[..., Any]) -> None:
     bot.on(events.Raw())(func)
 
 
+# Bot command registration
+async def registerCommands() -> None:
+    """Register bot commands from commands.txt file.
+
+    Reads commands in format: COMMAND=Description
+    Registers them with Telegram's bot command API.
+    """
+    logger.debug("registerCommands() called")
+    try:
+        assert bot is not None
+
+        # Read the commands from the file
+        commands = []
+        commands_file = os.path.join(os.path.dirname(__file__), "commands.txt")
+
+        logger.debug(f"Reading commands from: {commands_file}")
+        with open(commands_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and "=" in line:
+                    command, description = line.split("=", 1)
+                    logger.debug(
+                        f"Registering command: {command.lower()} - {description}"
+                    )
+                    commands.append(
+                        types.BotCommand(
+                            command=command.lower(), description=description
+                        )
+                    )
+
+        logger.debug(f"Setting {len(commands)} bot commands")
+        await bot(
+            functions.bots.SetBotCommandsRequest(
+                scope=types.BotCommandScopeDefault(),
+                lang_code="en",
+                commands=commands,
+            )
+        )
+        logger.info(f"Successfully registered {len(commands)} bot commands")
+    except Exception as e:
+        logger.error(f"Error registering bot commands: {e}", exc_info=True)
+
+
 # Bot lifecycle management
 async def run() -> None:
     """Start the bot and run until disconnected. Handles graceful shutdown on SIGINT/SIGTERM."""
@@ -100,6 +143,8 @@ async def run() -> None:
     # Add Telegram log handler after bot is running, so we can send messages
     logger.debug("Setting up Telegram logging")
     setupTelegramLog()
+    logger.debug("Registering bot commands")
+    await registerCommands()
     logger.info("Bot started.")
     assert bot is not None
     logger.debug("Waiting for bot to disconnect...")
@@ -124,8 +169,8 @@ async def shutdown() -> None:
 # Logging setup
 log_format: str = (
     "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green>"
-    " | <level>{level: <9}</level>"
-    " | <cyan>{name: <10}</cyan>"
+    " | <level>{level: <8}</level>"
+    " | <cyan>{name: <16}</cyan>"
     " | <cyan>{function: <20}</cyan> | <cyan>{line: >03}</cyan>"
     " - <level>{message}</level>"
 )
