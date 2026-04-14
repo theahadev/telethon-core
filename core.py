@@ -1,11 +1,11 @@
 """
 core.py — shared bot state and event registration helpers.
 
-Set `bot` and `data` before importing any handlers:
+Set `bot` and `config` before importing any handlers:
     import core
     core.bot = TelegramClient(...)
-    core.data = {...}
-    core.setupLogging()  # Call after core.data is populated
+    core.config = {...}
+    core.setupLogging()  # Call after core.config is populated
 """
 
 import asyncio
@@ -18,7 +18,7 @@ from loguru import logger
 from telethon import TelegramClient, events, functions, types
 
 bot: Optional[TelegramClient] = None
-data: Optional[Dict[str, Any]] = None
+config: Optional[Dict[str, Any]] = None
 
 # If you need the logs before setupLogging() is called,
 # comment out the next line. The logs will be on stderr.
@@ -199,16 +199,16 @@ async def logToTelegram(message: Any) -> None:
         + (f"\n**Debug:** `{extra['debug']}`" if extra.get("debug") else "")
     )
     assert bot is not None
-    assert data is not None
-    await bot.send_message(data["log_channel"], msg)
+    assert config is not None
+    await bot.send_message(config["log_channel"], msg)
 
 
 def setupTelegramLog() -> None:
     """Set up Telegram log handler if log_channel is configured."""
     logger.debug("setupTelegramLog() called")
-    assert data is not None
-    log_level_telegram = data.get("log_level_telegram")
-    log_channel = data.get("log_channel")
+    assert config is not None
+    log_level_telegram = config.get("log_level_telegram")
+    log_channel = config.get("log_channel")
     logger.debug(
         f"Telegram log config - channel: {log_channel}, level: {log_level_telegram}"
     )
@@ -226,19 +226,19 @@ def setupTelegramLog() -> None:
 
 
 def setupLogging() -> None:
-    """Set up logging based on configuration from core.data."""
+    """Set up logging based on configuration from core.config."""
     logger.debug("setupLogging() called")
-    assert data is not None
+    assert config is not None
 
     logger.remove()  # Remove default logger
     logger.debug("Removed default logger handlers")
 
-    log_level_stdout = data.get("log_level_stdout")
-    log_level_file = data.get("log_level_file")
-    log_file_path = data.get("log_file_path")
-    log_rotation = data.get("log_rotation")
-    log_retention = data.get("log_retention")
-    log_compression = data.get("log_compression")
+    log_level_stdout = config.get("log_level_stdout")
+    log_level_file = config.get("log_level_file")
+    log_file_path = config.get("log_file_path")
+    log_rotation = config.get("log_rotation")
+    log_retention = config.get("log_retention")
+    log_compression = config.get("log_compression")
 
     logger.debug(
         f"Logging config - stdout: {log_level_stdout}, file: {log_level_file}, path: {log_file_path}"

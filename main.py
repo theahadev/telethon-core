@@ -65,40 +65,40 @@ logger.debug("Initializing TelegramClient...")
 core.bot = TelegramClient(f"{data_folder}/bot", api_id, api_hash)
 logger.debug(f"TelegramClient initialized with session path: {data_folder}/bot")
 
-core.data = {}
+core.config = {}
 
-# Populate core.data with logging configuration if provided
+# Populate core.config with logging configuration if provided
 logger.debug("Populating logging configuration...")
 if log_level_stdout:
-    core.data["log_level_stdout"] = log_level_stdout
+    core.config["log_level_stdout"] = log_level_stdout
     logger.debug(f"Set log_level_stdout: {log_level_stdout}")
 if log_level_file:
-    core.data["log_level_file"] = log_level_file
+    core.config["log_level_file"] = log_level_file
     logger.debug(f"Set log_level_file: {log_level_file}")
 if log_level_telegram:
-    core.data["log_level_telegram"] = log_level_telegram
+    core.config["log_level_telegram"] = log_level_telegram
     logger.debug(f"Set log_level_telegram: {log_level_telegram}")
 if log_file_path:
-    core.data["log_file_path"] = log_file_path
+    core.config["log_file_path"] = log_file_path
     logger.debug(f"Set log_file_path: {log_file_path}")
 
 # Add log_channel if it's configured
 if log_channel:
-    core.data["log_channel"] = int(log_channel)
+    core.config["log_channel"] = int(log_channel)
     logger.debug(f"Set log_channel: {log_channel}")
 
 # Add log rotation/retention/compression if configured
 if log_rotation:
-    core.data["log_rotation"] = log_rotation
+    core.config["log_rotation"] = log_rotation
     logger.debug(f"Set log_rotation: {log_rotation}")
 if log_retention:
-    core.data["log_retention"] = log_retention
+    core.config["log_retention"] = log_retention
     logger.debug(f"Set log_retention: {log_retention}")
 if log_compression:
-    core.data["log_compression"] = log_compression
+    core.config["log_compression"] = log_compression
     logger.debug(f"Set log_compression: {log_compression}")
 
-# Setup logging after core.data is populated
+# Setup logging after core.config is populated
 logger.debug("Setting up logging system...")
 core.setupLogging()
 logger.debug("Logging system setup completed.")
