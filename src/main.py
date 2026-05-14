@@ -22,9 +22,11 @@ def getEnvVar(key: str) -> str:
 
 # Get optional env variables with defaults
 def getEnvVarOptional(key: str, default: str | None = None) -> str | None:
-    value = os.getenv(key, default)
-    if value:
-        logger.debug(f"Loaded optional environment variable: {key}")
+    value = os.getenv(key)
+    if value is None:
+        logger.debug(f"Environment variable '{key}' not set. Using default: {default}")
+        return default
+    logger.debug(f"Loaded optional environment variable: {key}")
     return value
 
 
