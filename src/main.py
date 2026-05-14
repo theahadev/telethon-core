@@ -100,7 +100,7 @@ if log_compression:
 
 # Setup logging after core.config is populated
 logger.debug("Setting up logging system...")
-core.setupLogging()
+core._setupLogging()
 logger.debug("Logging system setup completed.")
 
 logger.debug("Importing event handlers...")
@@ -111,5 +111,5 @@ logger.debug("Event handlers imported successfully.")
 logger.debug("Starting TelegramClient with bot token...")
 with core.bot.start(bot_token=bot_token):
     logger.debug("TelegramClient started successfully. Running bot...")
-    core.bot.loop.run_until_complete(core.run())
+    core.bot.loop.run_until_complete(core.start())
 logger.debug("TelegramClient context exited.")

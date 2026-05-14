@@ -102,7 +102,7 @@ def registerCommand(command: str, description: str) -> None:
     logger.debug(f"Queued command: /{command.lower()} - {description}")
 
 
-async def registerCommands() -> None:
+async def _registerCommands() -> None:
     """Register bot commands from commands.txt file.
 
     Reads commands in format: COMMAND=Description
@@ -126,7 +126,7 @@ async def registerCommands() -> None:
 
 
 # Bot lifecycle management
-async def run() -> None:
+async def start() -> None:
     """Start the bot and run until disconnected. Handles graceful shutdown on SIGINT/SIGTERM."""
     logger.debug("run() called, setting up event loop and signal handlers")
     loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
@@ -135,9 +135,9 @@ async def run() -> None:
     logger.debug("Signal handlers registered for SIGINT and SIGTERM")
     # Add Telegram log handler after bot is running, so we can send messages
     logger.debug("Setting up Telegram logging")
-    setupTelegramLog()
+    _setupTelegramLog()
     logger.debug("Registering bot commands")
-    await registerCommands()
+    await _registerCommands()
     logger.info("Bot started.")
     assert bot is not None
     logger.debug("Waiting for bot to disconnect...")
@@ -160,7 +160,7 @@ async def shutdown() -> None:
 
 
 # Logging setup
-log_format: str = (
+_log_format: str = (
     "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green>"
     " | <level>{level: <8}</level>"
     " | <cyan>{name: <16}</cyan>"
@@ -169,7 +169,7 @@ log_format: str = (
 )
 
 
-async def logToTelegram(message: Any) -> None:
+async def _logToTelegram(message: Any) -> None:
     """Send log messages to Telegram."""
     record: Any = message.record
 
@@ -196,7 +196,7 @@ async def logToTelegram(message: Any) -> None:
     await bot.send_message(config["log_channel"], msg)
 
 
-def setupTelegramLog() -> None:
+def _setupTelegramLog() -> None:
     """Set up Telegram log handler if log_channel is configured."""
     logger.debug("setupTelegramLog() called")
     assert config is not None
@@ -211,14 +211,14 @@ def setupTelegramLog() -> None:
         logger.debug(
             f"Adding Telegram log handler with level: {log_level_telegram or 'INFO'}"
         )
-        logger.add(logToTelegram, level=log_level_telegram or "INFO", enqueue=True)
+        logger.add(_logToTelegram, level=log_level_telegram or "INFO", enqueue=True)
     elif log_level_telegram is not None:
         logger.warning(
             "LOG_LEVEL_TELEGRAM is set but LOG_CHANNEL is not configured. Telegram logging will be disabled."
         )
 
 
-def setupLogging() -> None:
+def _setupLogging() -> None:
     """Set up logging based on configuration from core.config."""
     logger.debug("setupLogging() called")
     assert config is not None
@@ -246,20 +246,20 @@ def setupLogging() -> None:
     logger.debug(f"Adding stdout handler with level: {log_level_stdout or 'INFO'}")
     logger.add(
         sys.stdout,
-        format=log_format,
+        format=_log_format,
         level=log_level_stdout or "INFO",
         filter=stdoutFilter,
     )
 
     # Add stderr handler
     logger.debug("Adding stderr handler with level: ERROR")
-    logger.add(sys.stderr, format=log_format, level="ERROR")
+    logger.add(sys.stderr, format=_log_format, level="ERROR")
 
     # Add file handler if path is specified
     if log_file_path:
         logger.debug(f"Setting up file logging to: {log_file_path}")
         file_handler_kwargs = {
-            "format": log_format,
+            "format": _log_format,
             "level": log_level_file or "INFO",
             "enqueue": True,
         }
