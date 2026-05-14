@@ -54,4 +54,5 @@ This is a placeholder text for /start command in channels.
 
 
 core.onMessage(start_handler, pattern=r"^/start(\s|$)")
+core.registerCommand("start", "Start the bot")
 logger.debug("Start handler successfully registered")

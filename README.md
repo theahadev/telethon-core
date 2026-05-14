@@ -8,7 +8,7 @@ A modular Telegram bot framework built on [Telethon](https://github.com/LonamiWe
 - **Multi-sink logging** - independent log levels for stdout, file, and Telegram channel via [loguru](https://github.com/Delgan/loguru)
 - **Environment-based config** - all settings via `.env`, no hardcoded values
 - **Graceful lifecycle** — SIGINT/SIGTERM handling for clean shutdowns; `restart()` via `os.execv`
-- **Auto command registration** - define commands in `commands.txt`, they're registered with Telegram on startup
+- **Auto command registration** - handlers register their own commands via `core.registerCommand()`, registered with Telegram on startup
 - **Docker ready** - includes `Dockerfile` and `docker-compose.yml`
 
 ## Requirements
@@ -73,19 +73,18 @@ Copy `.env.example` to `.env` and fill in your values. Required variables are ma
 
 ```
 telethon-core/
-├── main.py              # Entry point — loads config, sets up client, imports handlers
-├── core.py              # Shared state, event wrappers, logging setup, lifecycle
-├── commands.txt         # Bot commands in COMMAND=Description format
-├── requirements.txt     # Python dependencies
+├── src/
+│   ├── main.py          # Entry point — loads config, sets up client, imports handlers
+│   ├── core.py          # Shared state, event wrappers, logging setup, lifecycle
+│   └── handlers/
+│       ├── __init__.py  # Auto-discovery and loading of handler modules
+│       ├── start.py     # /start handler
+│       ├── help.py      # /help handler
+│       └── addchat.py   # Bot added to chat handler
 ├── pyproject.toml       # Project metadata
 ├── Dockerfile
 ├── docker-compose.yml
-├── .env.example         # Environment variable template
-└── handlers/
-    ├── __init__.py      # Auto-discovery and loading of handler modules
-    ├── start.py         # /start handler
-    ├── help.py          # /help handler
-    └── addchat.py       # Bot added to chat handler
+└── .env.example         # Environment variable template
 ```
 
 ## Writing Handlers
@@ -101,6 +100,7 @@ async def my_handler(event: Any) -> None:
     await event.reply("hello!")
 
 core.onMessage(my_handler, pattern=r"^/hello(\s|$)")
+core.registerCommand("hello", "Say hello")  # optional — queued and sent to Telegram on startup
 ```
 
 ### Event Wrappers
@@ -119,14 +119,14 @@ core.onMessage(my_handler, pattern=r"^/hello(\s|$)")
 
 ## Bot Commands
 
-Edit `commands.txt` in `COMMAND=Description` format:
+Call `core.registerCommand(command, description)` at module level in your handler, right next to the event registration:
 
-```
-start=Start the bot
-help=Get help
+```python
+core.onMessage(start_handler, pattern=r"^/start(\s|$)")
+core.registerCommand("start", "Start the bot")
 ```
 
-Commands are registered with Telegram automatically on startup.
+Commands are queued as handlers are loaded, then registered with Telegram in bulk right before the main loop starts.
 
 ## License
 

@@ -20,6 +20,8 @@ from telethon import TelegramClient, events, functions, types
 bot: Optional[TelegramClient] = None
 config: Optional[Dict[str, Any]] = None
 
+commands: list[types.BotCommand] = []
+
 # If you need the logs before setupLogging() is called,
 # comment out the next line. The logs will be on stderr.
 logger.remove()  # kill default handler immediately
@@ -90,6 +92,16 @@ def onRaw(func: Callable[..., Any]) -> None:
 
 
 # Bot command registration
+def registerCommand(command: str, description: str) -> None:
+    """Queue a bot command for registration with Telegram.
+
+    Call this from your handler modules. Commands are sent to the
+    Telegram API in bulk when registerCommands() is awaited.
+    """
+    commands.append(types.BotCommand(command=command.lower(), description=description))
+    logger.debug(f"Queued command: /{command.lower()} - {description}")
+
+
 async def registerCommands() -> None:
     """Register bot commands from commands.txt file.
 
@@ -99,25 +111,6 @@ async def registerCommands() -> None:
     logger.debug("registerCommands() called")
     try:
         assert bot is not None
-
-        # Read the commands from the file
-        commands = []
-        commands_file = os.path.join(os.path.dirname(__file__), "commands.txt")
-
-        logger.debug(f"Reading commands from: {commands_file}")
-        with open(commands_file, "r") as f:
-            for line in f:
-                line = line.strip()
-                if line and "=" in line:
-                    command, description = line.split("=", 1)
-                    logger.debug(
-                        f"Registering command: {command.lower()} - {description}"
-                    )
-                    commands.append(
-                        types.BotCommand(
-                            command=command.lower(), description=description
-                        )
-                    )
 
         logger.debug(f"Setting {len(commands)} bot commands")
         await bot(
