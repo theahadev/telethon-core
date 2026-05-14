@@ -1,2 +1,0 @@
-START=Start the bot
-HELP=Get help
