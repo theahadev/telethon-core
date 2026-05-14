@@ -41,7 +41,7 @@ Registry of all module tables and subtables. Written by _ensureTable().
 
 Schema:
     handler       TEXT NOT NULL          -- e.g. "game"
-    table         TEXT NOT NULL          -- full table name e.g. "handlers.game.scores"
+    table         TEXT NOT NULL          -- full internal table name e.g. "handlers.game.scores"
     last_modified INTEGER NOT NULL
     PRIMARY KEY (handler, table)
 
@@ -50,7 +50,7 @@ Append-only audit log. Written on every mutating operation.
 
 Schema:
     id            INTEGER PRIMARY KEY AUTOINCREMENT
-    table         TEXT NOT NULL          -- full table name
+    table         TEXT NOT NULL          -- full internal table name
     key           TEXT                   -- NULL for dropTable
     type          TEXT                   -- type of value BEFORE action (NULL for dropTable row)
     value         TEXT                   -- value BEFORE action; for dropTable: full dumpTable output (json)
@@ -90,15 +90,19 @@ type column holds a string tag. value column holds the serialized value as TEXT.
     None          → "null"     → "" (empty string)
     list          → "list"     → json.dumps(v)
     dict          → "dict"     → json.dumps(v)
-    tuple         → "tuple"    → json.dumps(list(v))   # coerced to list on deserialize
-    set           → "set"      → json.dumps(list(v))   # coerced to list on deserialize
+    tuple         → "tuple"    → json.dumps(list(v))
+    set           → "set"      → json.dumps(list(v))
 
-    tuple and set are stored with their own type tags so round-trip is lossless
-    if the caller cares (they probably don't, but the info is preserved).
-
-    On deserialization:
-        tuple → returns list  (immutability is caller's problem)
-        set   → returns list
+    On deserialization, types are fully restored:
+        "str"   → str
+        "int"   → int
+        "float" → float
+        "bool"  → bool
+        "null"  → None
+        "list"  → list
+        "dict"  → dict
+        "tuple" → tuple
+        "set"   → set
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SANITIZATION
@@ -117,11 +121,82 @@ MODULE / HANDLER DETECTION
 _fetchHandlerName() walks the call stack using the `inspect` module.
 It skips frames inside db.py itself and returns the __name__ of the first
 external caller. e.g. if handlers/game.py calls setKey(), returns "handlers.game".
+Falls back to "unknown" if detection fails.
 
 Module name is used to:
-    - build the default table name: "handlers.<modulename>"  (only the last segment is used
-      if __name__ is already "handlers.game" — full name becomes "handlers.game")
+    - build the default table name: "handlers.<modulename>"
+      if __name__ is already "handlers.game", full table becomes "handlers.game"
+      if __name__ is just "game", full table becomes "handlers.game"
     - populate the `module` column in _audit and `modified_by` in global
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+All errors are returned as a dict (never raised to caller):
+
+    {
+        "error_code":   int,        -- see error codes below
+        "error_desc":   str,        -- short machine-readable name
+        "error_key":    str | None, -- key involved, null if not applicable
+        "error_table":  str | None, -- SCOPED table name ("" for default, "scores" for subtable)
+                                    -- never the full internal path (handlers.game.scores)
+        "error_detail": str | None, -- human-readable sentence e.g.
+                                    -- "key 'meow' does not exist in table ''"
+        "error_raw":    str | None  -- str(exception) for unexpected errors, null for clean errors
+    }
+
+── Error codes ────────────────────────────────────────────────────────────────
+
+    1xx — client errors (caller did something wrong)
+
+        100   invalid key name       key failed sanitization
+        101   invalid table name     table name failed sanitization
+        102   unsupported type       value type not serializable
+        103   key not found          getKey/delKey on nonexistent key
+        104   table not found        operation on nonexistent table
+        105   operation not permitted e.g. attempted to drop global table
+
+    2xx — system errors (db internals)
+
+        200   db not initialized     _initDatabase() not called yet
+        201   sqlite error           generic sqlite failure, detail in error_raw
+        202   serialization error    _serialize() failed unexpectedly
+        203   deserialization error  _deserialize() failed unexpectedly
+
+── Error examples ─────────────────────────────────────────────────────────────
+
+    key not found:
+    {
+        "error_code":   103,
+        "error_desc":   "key not found",
+        "error_key":    "meow",
+        "error_table":  "",
+        "error_detail": "key 'meow' does not exist in table ''",
+        "error_raw":    null
+    }
+
+    sqlite failure:
+    {
+        "error_code":   201,
+        "error_desc":   "sqlite error",
+        "error_key":    "meow",
+        "error_table":  "scores",
+        "error_detail": "database operation failed on table 'scores'",
+        "error_raw":    "disk I/O error"
+    }
+
+    db not initialized:
+    {
+        "error_code":   200,
+        "error_desc":   "db not initialized",
+        "error_key":    null,
+        "error_table":  null,
+        "error_detail": "_initDatabase() has not been called",
+        "error_raw":    null
+    }
+
+All errors are also logged via loguru at ERROR level before being returned.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PUBLIC API
@@ -129,83 +204,86 @@ PUBLIC API
 
 All public functions are async. All return tuples. Never raise to the caller.
 
+table parameter is always the SCOPED subtable name (e.g. "scores"), not the full path.
+Omit or pass None for the module's default table.
+
 ── Local (module-scoped) ───────────────────────────────────────────────────────
 
 setKey(key, value, table=None)
     Write a key. Creates table if needed.
-    table: optional subtable name (just the short name e.g. "scores", NOT the full path)
     Returns:
-        (True,  value,      key, full_table)
-        (False, error_str,  key, full_table)
+        (True,  value,      key, scoped_table)
+        (False, error_dict, key, scoped_table)
 
 getKey(key, table=None)
     Read a key.
     Returns:
-        (True,  value,      key, full_table)
-        (False, error_str,  key, full_table)   -- includes "key not found" case
+        (True,  value,      key, scoped_table)
+        (False, error_dict, key, scoped_table)
 
 delKey(key, table=None)
     Delete a key. Audits the old value.
     Returns:
-        (True,  old_value,  key, full_table)
-        (False, error_str,  key, full_table)
+        (True,  old_value,  key, scoped_table)
+        (False, error_dict, key, scoped_table)
 
 listKeys(table=None)
     List all keys in a table.
     Returns:
-        (True,  [key, ...],      full_table)
-        (False, error_str,       full_table)
+        (True,  [key, ...],      scoped_table)
+        (False, error_dict,      scoped_table)
 
 dropTable(table=None)
     Drop a table entirely. Audits a full dump before dropping.
     Returns:
-        (True,  dump_dict,  full_table)     -- dump_dict same format as dumpTable
-        (False, error_str,  full_table)
+        (True,  dump_dict,  scoped_table)
+        (False, error_dict, scoped_table)
 
 dumpTable(table=None)
     Return all rows with types and timestamps.
     Returns:
-        (True,  {
+        (True, {
             key: {
                 "type":          str,
                 "value":         <deserialized>,
                 "last_modified": int
             }, ...
-        }, full_table)
-        (False, error_str, full_table)
+        }, scoped_table)
+        (False, error_dict, scoped_table)
 
 listTables()
-    List all tables owned by this module (default + all subtables).
+    List all tables owned by this module (default + subtables), as scoped names.
+    "" = default table, "scores" = subtable
     Returns:
-        (True,  [full_table_name, ...])
-        (False, error_str)
+        (True,  ["", "scores", ...])
+        (False, error_dict)
 
 ── Global ──────────────────────────────────────────────────────────────────────
 
 setGlobal(key, value)
     Returns:
         (True,  value,     key)
-        (False, error_str, key)
+        (False, error_dict, key)
 
 getGlobal(key)
     Returns:
         (True,  value,     key)
-        (False, error_str, key)
+        (False, error_dict, key)
 
 delGlobal(key)
     Returns:
         (True,  old_value, key)
-        (False, error_str, key)
+        (False, error_dict, key)
 
 listGlobal()
     Returns:
         (True,  [key, ...])
-        (False, error_str)
+        (False, error_dict)
 
 dumpGlobal()
-    Same format as dumpTable but includes modified_by field per entry:
+    Same format as dumpTable but includes modified_by per entry.
     Returns:
-        (True,  {
+        (True, {
             key: {
                 "type":          str,
                 "value":         <deserialized>,
@@ -213,7 +291,7 @@ dumpGlobal()
                 "modified_by":   str
             }, ...
         })
-        (False, error_str)
+        (False, error_dict)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 INTERNAL FUNCTIONS
@@ -226,7 +304,7 @@ _fetchHandlerName() -> str
     Falls back to "unknown" if detection fails.
 
 _resolveTable(module: str, subtable: str | None) -> str
-    Builds full table name from module name and optional subtable.
+    Builds full internal table name from module name and optional subtable.
     Examples:
         ("handlers.game", None)       -> "handlers.game"
         ("handlers.game", "scores")   -> "handlers.game.scores"
@@ -245,11 +323,12 @@ _serialize(value) -> tuple[str, str]
 
 _deserialize(type_tag: str, value_str: str) -> any
     Converts (type_tag, value_str) back to Python value.
+    Fully restores tuple and set types.
     Raises ValueError for unknown type tags.
 
 _ensureTable(conn, table: str) -> None
     Creates the table if it doesn't exist (handlers.<x> schema).
-    Upserts a row into _handlers with handler name, full table name, and current timestamp.
+    Upserts a row into _handlers with handler name, full table name, current timestamp.
 
 _audit(conn, table, key, type_tag, value_str, action, module) -> None
     Appends a row to _audit. All params are pre-serialized strings.
@@ -259,7 +338,7 @@ _initDatabase(db_path: str) -> None
     Called once by main.py before any handlers load.
     Creates all system tables (_handlers, _audit, _metadata, global) if they don't exist.
     Inserts _metadata rows (version, created_at) if not already present.
-    Sets the module-level `_db_path` used by all other functions.
+    Sets the module-level _db_path used by all other functions.
     Must be called before any public function is used.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -274,9 +353,9 @@ DUMP FORMAT EXAMPLE
     "cfg":     {"type": "dict",  "value": {"x": 1},         "last_modified": 1748732004},
     "score":   {"type": "float", "value": 3.14,             "last_modified": 1748732005},
     "nothing": {"type": "null",  "value": None,             "last_modified": 1748732006},
-    "frozen":  {"type": "tuple", "value": [1, 2, 3],        "last_modified": 1748732007},
-    "unique":  {"type": "set",   "value": [1, 2, 3],        "last_modified": 1748732008},
-}, "handlers.game")
+    "frozen":  {"type": "tuple", "value": (1, 2, 3),        "last_modified": 1748732007},
+    "unique":  {"type": "set",   "value": {1, 2, 3},        "last_modified": 1748732008},
+}, "")
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TODO
