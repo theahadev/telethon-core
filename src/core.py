@@ -9,6 +9,7 @@ Set `bot` and `config` before importing any handlers:
 """
 
 import asyncio
+import inspect
 import os
 import signal
 import sys
@@ -17,82 +18,84 @@ from typing import Any, Callable, Dict, Optional
 from loguru import logger
 from telethon import TelegramClient, events, functions, types
 
-bot: Optional[TelegramClient] = None
-config: Optional[Dict[str, Any]] = None
-
+# Global bot state
+bot: TelegramClient = None  # ty: ignore[invalid-assignment]
+# Global config dict
+config: Dict[str, str | bool] = None  # ty: ignore[invalid-assignment]
+# Commands queued for registration
 commands: list[types.BotCommand] = []
 
-# If you need the logs before setupLogging() is called,
-# comment out the next line. The logs will be on stderr.
-logger.remove()  # kill default handler immediately
 
-
+#################################################
 # Event registration helpers
+#################################################
 def onMessage(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
     """Listen for new messages. Optionally filter by regex pattern."""
-    assert bot is not None
-    logger.debug(f"Registering onMessage handler: {func.__name__}, pattern={pattern}")
+    func_name = getattr(func, "__name__", repr(func))
+    logger.debug(f"Registering onMessage handler: {func_name}, pattern={pattern}")
     bot.on(events.NewMessage(pattern=pattern))(func)
 
 
 def onEdit(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
     """Listen for edited messages. Optionally filter by regex pattern."""
-    assert bot is not None
-    logger.debug(f"Registering onEdit handler: {func.__name__}, pattern={pattern}")
+    func_name = getattr(func, "__name__", repr(func))
+    logger.debug(f"Registering onEdit handler: {func_name}, pattern={pattern}")
     bot.on(events.MessageEdited(pattern=pattern))(func)
 
 
 def onDelete(func: Callable[..., Any]) -> None:
     """Listen for deleted messages. Only provides deleted_id/deleted_ids, no message content."""
-    assert bot is not None
-    logger.debug(f"Registering onDelete handler: {func.__name__}")
+    func_name = getattr(func, "__name__", repr(func))
+    logger.debug(f"Registering onDelete handler: {func_name}")
     bot.on(events.MessageDeleted())(func)
 
 
 def onRead(func: Callable[..., Any]) -> None:
     """Listen for messages being read."""
-    assert bot is not None
-    logger.debug(f"Registering onRead handler: {func.__name__}")
+    func_name = getattr(func, "__name__", repr(func))
+    logger.debug(f"Registering onRead handler: {func_name}")
     bot.on(events.MessageRead())(func)
 
 
 def onCallback(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
     """Listen for inline keyboard button presses. Optionally filter by regex pattern."""
-    assert bot is not None
-    logger.debug(f"Registering onCallback handler: {func.__name__}, pattern={pattern}")
+    func_name = getattr(func, "__name__", repr(func))
+    logger.debug(f"Registering onCallback handler: {func_name}, pattern={pattern}")
     bot.on(events.CallbackQuery(pattern=pattern))(func)
 
 
 def onInline(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
     """Listen for inline queries (@bot something). Optionally filter by regex pattern."""
-    assert bot is not None
-    logger.debug(f"Registering onInline handler: {func.__name__}, pattern={pattern}")
+    func_name = getattr(func, "__name__", repr(func))
+    logger.debug(f"Registering onInline handler: {func_name}, pattern={pattern}")
     bot.on(events.InlineQuery(pattern=pattern))(func)
 
 
 def onChatAction(func: Callable[..., Any]) -> None:
     """Listen for chat actions: users joining/leaving, title changes, pins, etc."""
-    assert bot is not None
-    logger.debug(f"Registering onChatAction handler: {func.__name__}")
+    func_name = getattr(func, "__name__", repr(func))
+    logger.debug(f"Registering onChatAction handler: {func_name}")
     bot.on(events.ChatAction())(func)
 
 
 def onUserUpdate(func: Callable[..., Any]) -> None:
     """Listen for user updates: typing indicators, online status, etc."""
-    assert bot is not None
-    logger.debug(f"Registering onUserUpdate handler: {func.__name__}")
+    func_name = getattr(func, "__name__", repr(func))
+    logger.debug(f"Registering onUserUpdate handler: {func_name}")
     bot.on(events.UserUpdate())(func)
 
 
 def onRaw(func: Callable[..., Any]) -> None:
     """Listen for raw Telegram Update objects. Unabstracted, use as last resort."""
-    assert bot is not None
-    logger.debug(f"Registering onRaw handler: {func.__name__}")
+    func_name = getattr(func, "__name__", repr(func))
+    logger.debug(f"Registering onRaw handler: {func_name}")
     bot.on(events.Raw())(func)
 
 
+#################################################
 # Bot command registration
-def registerCommand(command: str, description: str) -> None:
+#################################################
+def register_command(command: str, description: str) -> None:
     """Queue a bot command for registration with Telegram.
 
     Call this from your handler modules. Commands are sent to the
@@ -102,7 +105,7 @@ def registerCommand(command: str, description: str) -> None:
     logger.debug(f"Queued command: /{command.lower()} - {description}")
 
 
-async def _registerCommands() -> None:
+async def _register_commands() -> None:
     """Register bot commands from commands.txt file.
 
     Reads commands in format: COMMAND=Description
@@ -110,8 +113,6 @@ async def _registerCommands() -> None:
     """
     logger.debug("registerCommands() called")
     try:
-        assert bot is not None
-
         logger.debug(f"Setting {len(commands)} bot commands")
         await bot(
             functions.bots.SetBotCommandsRequest(
@@ -125,23 +126,26 @@ async def _registerCommands() -> None:
         logger.error(f"Error registering bot commands: {e}", exc_info=True)
 
 
+#################################################
 # Bot lifecycle management
+#################################################
 async def start() -> None:
     """Start the bot and run until disconnected. Handles graceful shutdown on SIGINT/SIGTERM."""
-    logger.debug("run() called, setting up event loop and signal handlers")
+    logger.debug("start() called, setting up event loop and signal handlers")
     loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, lambda: asyncio.ensure_future(shutdown()))
+        loop.add_signal_handler(
+            sig, lambda s=sig: asyncio.ensure_future(shutdown(reason=s.name))
+        )
     logger.debug("Signal handlers registered for SIGINT and SIGTERM")
     # Add Telegram log handler after bot is running, so we can send messages
     logger.debug("Setting up Telegram logging")
-    _setupTelegramLog()
+    config["log_telegram"] = _setup_tg_log()
     logger.debug("Registering bot commands")
-    await _registerCommands()
+    await _register_commands()
     logger.info("Bot started.")
-    assert bot is not None
     logger.debug("Waiting for bot to disconnect...")
-    await bot.run_until_disconnected()  # type: ignore
+    await bot.run_until_disconnected()
 
 
 def restart() -> None:
@@ -151,25 +155,24 @@ def restart() -> None:
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
-async def shutdown() -> None:
+async def shutdown(reason: str = "Unknown") -> None:
     """Gracefully shut down the bot."""
+    # Extract caller information for logging
+    if reason in ("SIGINT", "SIGTERM"):
+        caller = "OS signal"
+    else:
+        frame = inspect.stack()[1]
+        caller = f"{frame.filename}:{frame.lineno} in {frame.function}"
     logger.debug("shutdown() called, disconnecting bot")
-    logger.info("Bot stopped.")
-    assert bot is not None
-    await bot.disconnect()  # type: ignore
+    logger.info(f"Bot stopped. Reason: {reason} | Caller: {caller}")
+    await logger.complete()
+    await bot.disconnect()
 
 
-# Logging setup
-_log_format: str = (
-    "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green>"
-    " | <level>{level: <8}</level>"
-    " | <cyan>{name: <16}</cyan>"
-    " | <cyan>{function: <20}</cyan> | <cyan>{line: >03}</cyan>"
-    " - <level>{message}</level>"
-)
-
-
-async def _logToTelegram(message: Any) -> None:
+#################################################
+# Logging functions
+#################################################
+async def _log_to_telegram(message: Any) -> None:
     """Send log messages to Telegram."""
     record: Any = message.record
 
@@ -181,9 +184,6 @@ async def _logToTelegram(message: Any) -> None:
     time: str = record["time"].strftime("%d/%m/%Y %H:%M:%S")
     extra: Dict[str, Any] = record["extra"]
 
-    logger.debug(
-        f"logToTelegram: Sending {level} message from {name}.{function}:{line}"
-    )
     msg: str = (
         f"**#{level}**\n"
         f"**Time:** `{time}`\n"
@@ -191,92 +191,124 @@ async def _logToTelegram(message: Any) -> None:
         f"**Details:** `{text}`\n"
         + (f"\n**Debug:** `{extra['debug']}`" if extra.get("debug") else "")
     )
-    assert bot is not None
-    assert config is not None
-    await bot.send_message(config["log_channel"], msg)
+    await bot.send_message(int(config["log_channel"]), msg)
 
 
-def _setupTelegramLog() -> None:
+def _setup_tg_log() -> bool:
     """Set up Telegram log handler if log_channel is configured."""
-    logger.debug("setupTelegramLog() called")
-    assert config is not None
-    log_level_telegram = config.get("log_level_telegram")
-    log_channel = config.get("log_channel")
-    logger.debug(
-        f"Telegram log config - channel: {log_channel}, level: {log_level_telegram}"
-    )
-    if log_channel:
-        if log_level_telegram is None:
-            logger.warning("LOG_LEVEL_TELEGRAM is not set. Defaulting to INFO.")
-        logger.debug(
-            f"Adding Telegram log handler with level: {log_level_telegram or 'INFO'}"
-        )
-        logger.add(_logToTelegram, level=log_level_telegram or "INFO", enqueue=True)
-    elif log_level_telegram is not None:
+    logger.debug("Initiating telegram logging setup")
+    log_level_telegram = config["log_level_telegram"]
+    log_channel = config["log_channel"]
+
+    # Exit if log_level_telegram is NONE, because logging is disabled.
+    if log_level_telegram == "NONE":
+        logger.debug("Telegram logging is disabled (log_level_telegram=NONE)")
+        return False
+
+    # Exit if log_channel is not set, because no destination configured.
+    if log_channel == "NONE":
         logger.warning(
             "LOG_LEVEL_TELEGRAM is set but LOG_CHANNEL is not configured. Telegram logging will be disabled."
         )
-
-
-def _setupLogging() -> None:
-    """Set up logging based on configuration from core.config."""
-    logger.debug("setupLogging() called")
-    assert config is not None
-
-    logger.remove()  # Remove default logger
-    logger.debug("Removed default logger handlers")
-
-    log_level_stdout = config.get("log_level_stdout")
-    log_level_file = config.get("log_level_file")
-    log_file_path = config.get("log_file_path")
-    log_rotation = config.get("log_rotation")
-    log_retention = config.get("log_retention")
-    log_compression = config.get("log_compression")
+        return False
 
     logger.debug(
-        f"Logging config - stdout: {log_level_stdout}, file: {log_level_file}, path: {log_file_path}"
+        f"Adding Telegram log handler with level: {log_level_telegram}, channel: {log_channel}"
     )
+    logger.add(_log_to_telegram, level=log_level_telegram, enqueue=True)
+    return True
+
+
+_log_format: str = (
+    "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green>"
+    " | <level>{level: <8}</level>"
+    " | <cyan>{name: <16}</cyan>"
+    " | <cyan>{function: <20}</cyan> | <cyan>{line: >03}</cyan>"
+    " - <level>{message}</level>"
+)
+
+
+def _setup_stdout_log() -> bool:
+    """Set up stdout logging based on configuration from core.config."""
+    logger.debug("Initiating stdout logging setup")
+    # If you need the logs before stdout logging is set up, comment out the next line.
+    logger.remove()  # Remove default logger
+    logger.debug("Removed default logger handlers")
+    logger.debug("Fun fact: these last 2 comments are invisible in the logs :D")
+
+    # Read logging configuration from core.config
+    log_level_stdout = config["log_level_stdout"]
+
+    # Exit if log_level_stdout is NONE, because logging is disabled.
+    if log_level_stdout == "NONE":
+        logger.debug("Stdout logging is disabled (log_level_stdout=NONE)")
+        return False
 
     # Filter out logs with level >= 40 (ERROR and above) from stdout
     # they will be sent to stderr and Telegram instead
-    def stdoutFilter(record: Any) -> bool:
+    def stdout_filter(record: Any) -> bool:
         return record["level"].no < 40
 
     # Add stdout handler
-    logger.debug(f"Adding stdout handler with level: {log_level_stdout or 'INFO'}")
+    logger.debug(f"Adding stdout handler with level: {log_level_stdout}")
     logger.add(
         sys.stdout,
         format=_log_format,
-        level=log_level_stdout or "INFO",
-        filter=stdoutFilter,
+        level=log_level_stdout,
+        filter=stdout_filter,
     )
 
     # Add stderr handler
     logger.debug("Adding stderr handler with level: ERROR")
     logger.add(sys.stderr, format=_log_format, level="ERROR")
+    return True
 
-    # Add file handler if path is specified
-    if log_file_path:
-        logger.debug(f"Setting up file logging to: {log_file_path}")
-        file_handler_kwargs = {
-            "format": _log_format,
-            "level": log_level_file or "INFO",
-            "enqueue": True,
-        }
-        if log_rotation is not None:
-            file_handler_kwargs["rotation"] = log_rotation
-            logger.debug(f"File rotation enabled: {log_rotation}")
-        if log_retention is not None:
-            file_handler_kwargs["retention"] = log_retention
-            logger.debug(f"File retention enabled: {log_retention}")
-        if log_compression is not None:
-            file_handler_kwargs["compression"] = log_compression
-            logger.debug(f"File compression enabled: {log_compression}")
-        logger.add(log_file_path, **file_handler_kwargs)
-        if log_level_file is None:
-            logger.warning("LOG_LEVEL_FILE is not set. Defaulting to INFO.")
 
-    elif log_level_file:
+def _setup_file_log() -> bool:
+    """Set up file logging based on configuration from core.config."""
+    logger.debug("Initiating file logging setup")
+
+    # Read logging configuration from core.config
+    log_level_file = config["log_level_file"]
+    log_file_path = config["log_file_path"]
+
+    log_rotation = config["log_rotation"]
+    log_retention = config["log_retention"]
+    log_compression = config["log_compression"]
+
+    # Exit if log_level_file is NONE, because logging is disabled.
+    if log_level_file == "NONE":
+        logger.debug("File logging is disabled (log_level_file=NONE)")
+        return False
+
+    # Exit if log_file_path is not set, because no destination configured.
+    if log_file_path == "NONE":
         logger.warning(
             "LOG_LEVEL_FILE is set but LOG_FILE_PATH is not configured. File logging will be disabled."
         )
+        return False
+
+    logger.debug(
+        f"Setting up file logging level: {log_level_file}, path: {log_file_path}"
+    )
+
+    file_handler_kwargs = {
+        "format": _log_format,
+        "level": log_level_file,
+        "enqueue": True,
+    }
+
+    if log_rotation != "NONE":
+        file_handler_kwargs["rotation"] = log_rotation
+        logger.debug(f"File rotation enabled: {log_rotation}")
+
+    if log_retention != "NONE":
+        file_handler_kwargs["retention"] = log_retention
+        logger.debug(f"File retention enabled: {log_retention}")
+
+    if log_compression != "NONE":
+        file_handler_kwargs["compression"] = log_compression
+        logger.debug(f"File compression enabled: {log_compression}")
+
+    logger.add(log_file_path, **file_handler_kwargs)  # ty: ignore
+    return True

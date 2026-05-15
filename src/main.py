@@ -21,7 +21,7 @@ def getEnvVar(key: str) -> str:
 
 
 # Get optional env variables with defaults
-def getEnvVarOptional(key: str, default: str | None = None) -> str | None:
+def getEnvVarOptional(key: str, default: str) -> str:
     value = os.getenv(key)
     if value is None:
         logger.debug(f"Environment variable '{key}' not set. Using default: {default}")
@@ -37,21 +37,29 @@ api_hash = getEnvVar("API_HASH")
 bot_token = getEnvVar("BOT_TOKEN")
 logger.debug(f"Telegram API ID: {api_id}, API Hash: {api_hash[:10]}...")
 
-# Other env variables
+# Data paths and other variables
 logger.debug("Loading configuration variables...")
-data_folder = Path(getEnvVar("DATA_FOLDER")).expanduser().resolve()
+
+data_folder = str(Path(getEnvVar("DATA_FOLDER")).expanduser().resolve())
 logger.debug(f"Data folder path resolved to: {data_folder}")
 
-# Logger level configuration from env vars
-log_level_stdout = getEnvVarOptional("LOG_LEVEL_STDOUT")
-log_level_file = getEnvVarOptional("LOG_LEVEL_FILE")
-log_level_telegram = getEnvVarOptional("LOG_LEVEL_TELEGRAM")
+db_name = getEnvVarOptional("DB_NAME", "database.db")
+db_path = (
+    Path(getEnvVarOptional("DB_PATH", data_folder)).expanduser().resolve() / db_name
+)
+logger.debug(f"Database path resolved to: {db_path}")
 
-log_channel = getEnvVarOptional("LOG_CHANNEL")
-log_file_path = getEnvVarOptional("LOG_FILE_PATH")
-log_rotation = getEnvVarOptional("LOG_ROTATION")
-log_retention = getEnvVarOptional("LOG_RETENTION")
-log_compression = getEnvVarOptional("LOG_COMPRESSION")
+
+# Logger level configuration from env vars
+log_level_stdout = getEnvVarOptional("LOG_LEVEL_STDOUT", "INFO")
+log_level_file = getEnvVarOptional("LOG_LEVEL_FILE", "NONE")
+log_level_telegram = getEnvVarOptional("LOG_LEVEL_TELEGRAM", "INFO")
+
+log_channel = getEnvVarOptional("LOG_CHANNEL", "NONE")
+log_file_path = getEnvVarOptional("LOG_FILE_PATH", "NONE")
+log_rotation = getEnvVarOptional("LOG_ROTATION", "NONE")
+log_retention = getEnvVarOptional("LOG_RETENTION", "NONE")
+log_compression = getEnvVarOptional("LOG_COMPRESSION", "NONE")
 
 
 # Ensure data folder exists
@@ -71,22 +79,18 @@ core.config = {}
 
 # Populate core.config with logging configuration if provided
 logger.debug("Populating logging configuration...")
-if log_level_stdout:
-    core.config["log_level_stdout"] = log_level_stdout
-    logger.debug(f"Set log_level_stdout: {log_level_stdout}")
-if log_level_file:
-    core.config["log_level_file"] = log_level_file
-    logger.debug(f"Set log_level_file: {log_level_file}")
-if log_level_telegram:
-    core.config["log_level_telegram"] = log_level_telegram
-    logger.debug(f"Set log_level_telegram: {log_level_telegram}")
-if log_file_path:
-    core.config["log_file_path"] = log_file_path
-    logger.debug(f"Set log_file_path: {log_file_path}")
+core.config["log_level_stdout"] = log_level_stdout
+logger.debug(f"Set log_level_stdout: {log_level_stdout}")
+core.config["log_level_file"] = log_level_file
+logger.debug(f"Set log_level_file: {log_level_file}")
+core.config["log_level_telegram"] = log_level_telegram
+logger.debug(f"Set log_level_telegram: {log_level_telegram}")
+core.config["log_file_path"] = log_file_path
+logger.debug(f"Set log_file_path: {log_file_path}")
 
 # Add log_channel if it's configured
 if log_channel:
-    core.config["log_channel"] = int(log_channel)
+    core.config["log_channel"] = log_channel
     logger.debug(f"Set log_channel: {log_channel}")
 
 # Add log rotation/retention/compression if configured
@@ -102,7 +106,9 @@ if log_compression:
 
 # Setup logging after core.config is populated
 logger.debug("Setting up logging system...")
-core._setupLogging()
+core.config["log_stdout"] = core._setup_stdout_log()
+core.config["log_file"] = core._setup_file_log()
+# Telegram logging is done after client is started, so we set it up in the start function
 logger.debug("Logging system setup completed.")
 
 logger.debug("Importing event handlers...")
