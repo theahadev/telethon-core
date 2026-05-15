@@ -1,6 +1,9 @@
 # TODO
 This is a list of things that i am planning to add to the project in the future. This is not a complete list and is fully dependent on my mood to keep this list updated or to follow this list. Feel free to send a PR if you want to add something to this list or if you want to implement something from this list.
 
+## Immediate
+- [ ] Finish logging refactor and figure out a better place to register logger sinks
+
 ## Database
 
 ### Core Infrastructure
