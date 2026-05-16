@@ -28,27 +28,33 @@ def get_env_var_optional(key: str, default: str) -> str:
 
 
 # Set globals in an ugly way
-api_id: int = None  # ty: ignore[invalid-assignment]
-api_hash: str = None  # ty: ignore[invalid-assignment]
-bot_token: str = None  # ty: ignore[invalid-assignment]
-session_string: str = None  # ty: ignore[invalid-assignment]
-data_folder: str = None  # ty: ignore[invalid-assignment]
-db_path: str = None  # ty: ignore[invalid-assignment]
+api_id: int = 0
+api_hash: str = "NONE"
+bot_token: str = "NONE"
+session_string: str = "NONE"
+
+client_type: str = "bot"
+session_name: str = "bot"
+
+data_folder: str = "data"
+db_path: str = "database.db"
 
 
 # Load telethon API config
 def load_secrets():
-    global api_id, api_hash, bot_token, session_string
+    global api_id, api_hash, bot_token, session_string, session_name
     logger.debug("Loading Telegram API credentials...")
     api_id = int(get_env_var("API_ID"))
     api_hash = get_env_var("API_HASH")
-    bot_token = get_env_var_optional("BOT_TOKEN", "NONE")
-    session_string = get_env_var_optional("SESSION_STRING", "NONE")
+    bot_token = get_env_var_optional("BOT_TOKEN", bot_token)
+    session_string = get_env_var_optional("SESSION_STRING", session_string)
     logger.debug(f"Telegram API ID: {api_id}, API Hash: {api_hash[:10]}...")
+
+    session_name = get_env_var_optional("SESSION_NAME", session_name)
+    logger.debug(f"Client type: {client_type}")
+
     if bot_token == "NONE" and session_string == "NONE":
         raise ValueError("Either BOT_TOKEN or SESSION_STRING must be provided")
-    elif bot_token != "NONE" and session_string != "NONE":
-        raise ValueError("Only one of BOT_TOKEN or SESSION_STRING must be provided ")
 
 
 # Load data folder path and resolve full paths
@@ -57,12 +63,12 @@ def load_resolve_paths():
     # Load data folder path
     logger.debug("Loading data folder path...")
     data_folder = str(
-        Path(get_env_var_optional("DATA_FOLDER", "data")).expanduser().resolve()
+        Path(get_env_var_optional("DATA_FOLDER", data_folder)).expanduser().resolve()
     )
     logger.debug(f"Data folder path resolved to: {data_folder}")
 
     # Resolve database path
-    db_name = get_env_var_optional("DB_NAME", "database.db")
+    db_name = get_env_var_optional("DB_NAME", db_path)
     db_path = str(
         Path(get_env_var_optional("DB_PATH", data_folder)).expanduser().resolve()
         / db_name
@@ -82,12 +88,20 @@ def ensure_path():
 
 
 def init_tg_client():
-    global api_id, api_hash
+    global api_id, api_hash, session_string
     logger.debug("Initializing TelegramClient...")
-    core.bot = TelegramClient(f"{data_folder}/bot", api_id, api_hash)
-    logger.debug(f"TelegramClient initialized with session path: {data_folder}/bot")
+    if session_string == "NONE":
+        core.bot = TelegramClient(f"{data_folder}/{session_name}", api_id, api_hash)
+        logger.debug(
+            f"TelegramClient initialized on path: {data_folder}/{session_name}"
+        )
+    elif session_string != "NONE":
+        from telethon.sessions import StringSession
+
+        core.bot = TelegramClient(StringSession(session_string), api_id, api_hash)
+        logger.debug("TelegramClient initialized with session string")
     # Immediately clear the variables from memory after init
-    api_id, api_hash = None, None  # ty: ignore[invalid-assignment]
+    api_id, api_hash, session_string = 0, "NONE", "NONE"
 
 
 def setup_config():
@@ -111,6 +125,12 @@ def setup_config():
 
     core.config["trigger_char"] = get_env_var_optional("TRIGGER_CHAR", "/")
 
+    core.config["client_type"] = get_env_var_optional("CLIENT_TYPE", client_type)
+    if core.config["client_type"] not in ("bot", "user"):
+        raise ValueError(
+            f"CLIENT_TYPE must be 'bot' or 'user', got '{core.config['client_type']}'"
+        )
+
 
 def setup_logging():
     logger.debug("Setting up logging system...")
@@ -122,12 +142,19 @@ def setup_logging():
 
 def start_loop():
     global bot_token
-    logger.debug("Starting TelegramClient with bot token...")
-    with core.bot.start(bot_token=bot_token):
-        # Clear bot token from memory
-        bot_token = None  # ty: ignore[invalid-assignment]
-        logger.debug("TelegramClient started successfully. Running bot...")
-        core.bot.loop.run_until_complete(core.start())
+    global session_string
+    if bot_token != "NONE":
+        logger.debug("Starting TelegramClient with bot token...")
+        with core.bot.start(bot_token=bot_token):
+            # Clear bot token from memory
+            bot_token = None  # ty: ignore[invalid-assignment]
+            logger.debug("TelegramClient started successfully. Running bot...")
+            core.bot.loop.run_until_complete(core.start())
+    else:  # we already cleared session_string from memory, it's not trustable anymore
+        logger.debug("Starting TelegramClient with session string...")
+        with core.bot.start():
+            logger.debug("TelegramClient started successfully. Running bot...")
+            core.bot.loop.run_until_complete(core.start())
     logger.debug("TelegramClient context exited.")
 
 

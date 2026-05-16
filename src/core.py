@@ -382,7 +382,13 @@ async def _setup_config_extras() -> None:
 
 
 def _check_config() -> None:
-    """Check some variables and complain if they are unfitting for situation."""
+    """Check some variables and complain if they are unfitting for situation, or throw an error."""
+    # if client_type doesn't match is_bot output:
+    if config["client_type"] == "bot" and not config["is_bot"]:
+        raise ValueError("CLIENT_TYPE=bot but session belongs to a user account")
+    if config["client_type"] == "user" and config["is_bot"]:
+        raise ValueError("CLIENT_TYPE=user but session belongs to a bot account")
+
     if config["trigger_char"] == "":
         logger.warning("Trigger character is empty. on_command handlers might misfire.")
     if not config["is_bot"] and config["trigger_char"] == "/":
