@@ -56,5 +56,5 @@ async def addchat_handler(event: Any) -> None:
         raise
 
 
-core.onChatAction(addchat_handler)
+core.on_chat_action(addchat_handler)
 logger.debug("Add chat handler successfully registered")

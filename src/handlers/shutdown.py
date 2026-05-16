@@ -45,6 +45,6 @@ This is a placeholder text for /shutdown command in groups.
         raise
 
 
-core.on_message(shutdown_handler, pattern="/shutdown")
+core.on_command("shutdown", shutdown_handler)
 core.set_bot_command("shutdown", "Shut down the bot")
 logger.debug("Shutdown handler successfully registered")
