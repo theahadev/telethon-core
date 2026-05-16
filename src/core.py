@@ -21,7 +21,7 @@ from telethon import TelegramClient, events, functions, types
 # Global bot state
 bot: TelegramClient = None  # ty: ignore[invalid-assignment]
 # Global config dict
-config: Dict[str, str | bool] = None  # ty: ignore[invalid-assignment]
+config: Dict[str, str | bool] = {}
 # Commands queued for registration
 commands: list[types.BotCommand] = []
 
