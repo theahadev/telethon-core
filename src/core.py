@@ -112,6 +112,10 @@ def on_command(func: Callable[..., Any], command: str, catchall: bool = True) ->
             # FIXME: users will be annoyed to use /command@username in pm instead of /command
             pattern = rf"^{config['trigger_char']}{command}@{config['username']}"
     else:
+        if config["username"] == "":
+            logger.warning(
+                "Username was not found. on_command handlers be broken (/command@)."
+            )
         if catchall:
             # For user accounts, catchall works differently, no username suffix
             pattern = (
