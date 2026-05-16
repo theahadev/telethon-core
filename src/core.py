@@ -368,10 +368,13 @@ def _setup_file_log() -> bool:
 
 async def _setup_config_extras() -> None:
     config["is_bot"] = await bot.is_bot()
+    logger.debug(f"is_bot: {config['is_bot']}")
     me = cast(types.User, await bot.get_me(input_peer=False))
     config["user_id"] = str(me.id)
+    logger.debug(f"user_id: {config['user_id']}")
     # im too tired to figure out falsy
     config["username"] = me.username if me.username else ""
+    logger.debug(f"username: {config['username']}")
 
 
 def _check_config() -> None:
