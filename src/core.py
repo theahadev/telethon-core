@@ -110,9 +110,9 @@ def on_command(func: Callable[..., Any], command: str, catchall: bool = False) -
 
 
 #################################################
-# Bot command list registration
+# Setting bot commands list with the API
 #################################################
-def register_command(command: str, description: str) -> None:
+def set_bot_command(command: str, description: str) -> None:
     """Queue a bot command for registration with Telegram.
 
     Call this from your handler modules. Commands are sent to the
