@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from telethon import TelegramClient
 
-import core
+from core import bot, core
 
 
 # Raise a clear error on missing keys
@@ -91,14 +91,14 @@ def init_tg_client():
     global api_id, api_hash, session_string
     logger.debug("Initializing TelegramClient...")
     if session_string == "NONE":
-        core.bot = TelegramClient(f"{data_folder}/{session_name}", api_id, api_hash)
+        core.client = TelegramClient(f"{data_folder}/{session_name}", api_id, api_hash)
         logger.debug(
             f"TelegramClient initialized on path: {data_folder}/{session_name}"
         )
     elif session_string != "NONE":
         from telethon.sessions import StringSession
 
-        core.bot = TelegramClient(StringSession(session_string), api_id, api_hash)
+        core.client = TelegramClient(StringSession(session_string), api_id, api_hash)
         logger.debug("TelegramClient initialized with session string")
     # Immediately clear the variables from memory after init
     api_id, api_hash, session_string = 0, "NONE", "NONE"
@@ -145,16 +145,16 @@ def start_loop():
     global session_string
     if bot_token != "NONE":
         logger.debug("Starting TelegramClient with bot token...")
-        with core.bot.start(bot_token=bot_token):
+        with core.client.start(bot_token=bot_token):
             # Clear bot token from memory
             bot_token = None  # ty: ignore[invalid-assignment]
             logger.debug("TelegramClient started successfully. Running bot...")
-            core.bot.loop.run_until_complete(core.start())
+            core.client.loop.run_until_complete(bot.start())
     else:  # we already cleared session_string from memory, it's not trustable anymore
         logger.debug("Starting TelegramClient with session string...")
-        with core.bot.start():
+        with core.client.start():
             logger.debug("TelegramClient started successfully. Running bot...")
-            core.bot.loop.run_until_complete(core.start())
+            core.client.loop.run_until_complete(bot.start())
     logger.debug("TelegramClient context exited.")
 
 
