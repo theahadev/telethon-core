@@ -3,7 +3,7 @@ from typing import Any
 from loguru import logger
 from telethon.tl.types import User
 
-import core
+from core import core
 
 
 async def addchat_handler(event: Any) -> None:
@@ -18,8 +18,8 @@ async def addchat_handler(event: Any) -> None:
     logger.debug(f"Add chat handler triggered in chat: {event.chat_id}")
     try:
         # Get current bot info
-        assert core.bot is not None
-        bot_me = await core.bot.get_me()
+        assert core.client is not None
+        bot_me = await core.client.get_me()
 
         # Assert that bot_me is a User instance with an id
         assert isinstance(bot_me, User), f"Expected User, got {type(bot_me)}"

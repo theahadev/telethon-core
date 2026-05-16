@@ -2,7 +2,7 @@ from typing import Any
 
 from loguru import logger
 
-import core
+from core import bot, core
 
 
 async def shutdown_handler(event: Any) -> None:
@@ -29,7 +29,7 @@ This is a placeholder text for /shutdown command in pm's.
             logger.debug(
                 f"Sending shutdown text for private chat to user: {event.sender_id}"
             )
-            await core.shutdown("manual trigger from private chat")
+            await bot.shutdown("manual trigger from private chat")
 
         # Handle group messages
         elif event.is_group:
@@ -38,7 +38,7 @@ This is a placeholder text for /shutdown command in groups.
 """
             await event.reply(message, parse_mode="markdown")
             logger.debug(f"Sending shutdown text for group to user: {event.sender_id}")
-            await core.shutdown("manual trigger from group")
+            await bot.shutdown("manual trigger from group")
 
     except Exception as e:
         logger.error(f"Error in shutdown_handler: {e}")

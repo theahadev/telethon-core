@@ -2,7 +2,7 @@ from typing import Any
 
 from loguru import logger
 
-import core
+from core import core
 
 
 async def help_handler(event: Any) -> None:
