@@ -100,13 +100,22 @@ def on_raw(func: Callable[..., Any]) -> None:
 def on_command(func: Callable[..., Any], command: str, catchall: bool = True) -> None:
     """Listen for messages starting with a specific command trigger character."""
     func_name = getattr(func, "__name__", repr(func))
-    if catchall:
-        # Matches both /command and /command@username
-        pattern = rf"^{config['trigger_char']}{command}(@{config['username']})?(\s|$)"
+
+    if config["is_bot"]:
+        if catchall:
+            # Matches both /command and /command@username
+            pattern = (
+                rf"^{config['trigger_char']}{command}(@{config['username']})?(\s|$)"
+            )
+        else:
+            # Matches only /command@username, to avoid conflicts in groups with multiple bots
+            # FIXME: users will be annoyed to use /command@username in pm instead of /command
+            pattern = rf"^{config['trigger_char']}{command}@{config['username']}"
     else:
-        # Matches only /command@username, to avoid conflicts in groups with multiple bots
-        # FIXME: users will be annoyed to use /command@username in pm instead of /command
-        pattern = rf"^{config['trigger_char']}{command}@{config['username']}"
+        if catchall:
+            # For user accounts, catchall works differently, no username suffix
+            pattern = rf"^{config['trigger_char']}{command}(\s|$)"
+
     logger.debug(f"Registering on_command handler: {func_name}, command={command}")
     bot.on(events.NewMessage(pattern=pattern))(func)
 
@@ -161,15 +170,15 @@ async def start() -> None:
     logger.debug("Setting up Telegram logging")
     config["log_telegram"] = _setup_tg_log()
     logger.debug("Setting up extra variables in config")
-    config["is_bot"] = await bot.is_bot()
-    me = cast(types.User, await bot.get_me(input_peer=False))
-    config["user_id"] = str(me.id)
-    # im too tired to figure out falsy
-    config["username"] = me.username if me.username else ""
+    await _setup_config_extras()
+    # Check config for potential issues and log warnings if needed
+    logger.debug("Checking configuration for potential issues")
+    _check_config()
     logger.debug("Registering bot commands")
     await _register_commands()
+    # Log bot start with username or user_id for clarity
     logger.info(
-        f"Bot started as {('@' + config['username']) if config['username'] else config['user_id']}."
+        f"""Bot started as {f"@{config['username']}" if config["username"] != "" else config["user_id"]}."""
     )
     logger.debug("Waiting for bot to disconnect...")
     await bot.run_until_disconnected()
@@ -339,3 +348,26 @@ def _setup_file_log() -> bool:
 
     logger.add(log_file_path, **file_handler_kwargs)  # ty: ignore
     return True
+
+
+#################################################
+# Config management and extras setup
+#################################################
+
+
+async def _setup_config_extras() -> None:
+    config["is_bot"] = await bot.is_bot()
+    me = cast(types.User, await bot.get_me(input_peer=False))
+    config["user_id"] = str(me.id)
+    # im too tired to figure out falsy
+    config["username"] = me.username if me.username else ""
+
+
+def _check_config() -> None:
+    """Check some variables and complain if they are unfitting for situation."""
+    if config["trigger_char"] == "":
+        logger.warning("Trigger character is empty. on_command handlers might misfire.")
+    if not config["is_bot"] and config["trigger_char"] == "/":
+        logger.warning(
+            "Using '/' (forward slash) as trigger character for user accounts can cause conflicts with normal bots. Consider changing trigger_char in config."
+        )
