@@ -62,17 +62,20 @@ wheels = [
 
 [[package]]
 name = "telethon"
-version = "1.36.0"
+version = "1.43.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyaes" },
     { name = "rsa" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7c/22/30ba05af24c8209f859cecccfaa5943b7a6ed39070da515b9e6b56738b20/Telethon-1.36.0.tar.gz", hash = "sha256:11db5c7ed7e37f1272d443fb7eea0f1db580d56c6949165233946fb323aaf3a7", size = 606300, upload-time = "2024-06-11T14:44:28.662Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/f2/946ea3ca34740ea3bcb6033e44635e35058da5b1f349f99ba7c5b05b7296/telethon-1.43.2.tar.gz", hash = "sha256:794912eb546eacfe351ca7bf097b029f963da95985a07490653a99bf98219957", size = 687158, upload-time = "2026-04-20T08:06:42.044Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/85/53197127a93fd23a0ec7367a125939cb8c6cc23f0f9f2c0a04692f3ab51d/telethon-1.43.2-py3-none-any.whl", hash = "sha256:7e8a23a08f8474f3ac0c46847f3edd4e965b4452de0ba868b089acbad8041aa4", size = 773609, upload-time = "2026-04-20T08:06:44.496Z" },
+]
 
 [[package]]
 name = "telethon-core"
-version = "0.1.0"
+version = "0.5.0"
 source = { virtual = "." }
 dependencies = [
     { name = "loguru" },
@@ -83,8 +86,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
-    { name = "python-dotenv", specifier = "==1.0.1" },
-    { name = "telethon", specifier = "==1.36.0" },
+    { name = "python-dotenv", specifier = ">=1.0.1" },
+    { name = "telethon", specifier = ">=1.43.2" },
 ]
 
 [[package]]
