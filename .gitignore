@@ -12,5 +12,6 @@ venv.bak/
 
 *.session
 *.session-journal
+session*
 
 data/
