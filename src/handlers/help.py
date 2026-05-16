@@ -53,6 +53,6 @@ This is a placeholder text for /help command in channels.
         raise
 
 
-core.onMessage(help_handler, pattern=r"^/help(\s|$)")
+core.on_message(help_handler, pattern=r"^/help(\s|$)")
 core.register_command("help", "Show help")
 logger.debug("Help handler successfully registered")

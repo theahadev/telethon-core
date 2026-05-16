@@ -13,7 +13,7 @@ import inspect
 import os
 import signal
 import sys
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
 from loguru import logger
 from telethon import TelegramClient, events, functions, types
@@ -29,66 +29,66 @@ commands: list[types.BotCommand] = []
 #################################################
 # Event registration helpers
 #################################################
-def onMessage(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
+def on_message(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
     """Listen for new messages. Optionally filter by regex pattern."""
     func_name = getattr(func, "__name__", repr(func))
-    logger.debug(f"Registering onMessage handler: {func_name}, pattern={pattern}")
+    logger.debug(f"Registering on_message handler: {func_name}, pattern={pattern}")
     bot.on(events.NewMessage(pattern=pattern))(func)
 
 
-def onEdit(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
+def on_edit(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
     """Listen for edited messages. Optionally filter by regex pattern."""
     func_name = getattr(func, "__name__", repr(func))
-    logger.debug(f"Registering onEdit handler: {func_name}, pattern={pattern}")
+    logger.debug(f"Registering on_edit handler: {func_name}, pattern={pattern}")
     bot.on(events.MessageEdited(pattern=pattern))(func)
 
 
-def onDelete(func: Callable[..., Any]) -> None:
+def on_delete(func: Callable[..., Any]) -> None:
     """Listen for deleted messages. Only provides deleted_id/deleted_ids, no message content."""
     func_name = getattr(func, "__name__", repr(func))
-    logger.debug(f"Registering onDelete handler: {func_name}")
+    logger.debug(f"Registering on_delete handler: {func_name}")
     bot.on(events.MessageDeleted())(func)
 
 
-def onRead(func: Callable[..., Any]) -> None:
+def on_read(func: Callable[..., Any]) -> None:
     """Listen for messages being read."""
     func_name = getattr(func, "__name__", repr(func))
-    logger.debug(f"Registering onRead handler: {func_name}")
+    logger.debug(f"Registering on_read handler: {func_name}")
     bot.on(events.MessageRead())(func)
 
 
-def onCallback(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
+def on_callback(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
     """Listen for inline keyboard button presses. Optionally filter by regex pattern."""
     func_name = getattr(func, "__name__", repr(func))
-    logger.debug(f"Registering onCallback handler: {func_name}, pattern={pattern}")
+    logger.debug(f"Registering on_callback handler: {func_name}, pattern={pattern}")
     bot.on(events.CallbackQuery(pattern=pattern))(func)
 
 
-def onInline(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
+def on_inline(func: Callable[..., Any], pattern: Optional[str] = None) -> None:
     """Listen for inline queries (@bot something). Optionally filter by regex pattern."""
     func_name = getattr(func, "__name__", repr(func))
-    logger.debug(f"Registering onInline handler: {func_name}, pattern={pattern}")
+    logger.debug(f"Registering on_inline handler: {func_name}, pattern={pattern}")
     bot.on(events.InlineQuery(pattern=pattern))(func)
 
 
-def onChatAction(func: Callable[..., Any]) -> None:
+def on_chat_action(func: Callable[..., Any]) -> None:
     """Listen for chat actions: users joining/leaving, title changes, pins, etc."""
     func_name = getattr(func, "__name__", repr(func))
-    logger.debug(f"Registering onChatAction handler: {func_name}")
+    logger.debug(f"Registering on_chat_action handler: {func_name}")
     bot.on(events.ChatAction())(func)
 
 
-def onUserUpdate(func: Callable[..., Any]) -> None:
+def on_user_update(func: Callable[..., Any]) -> None:
     """Listen for user updates: typing indicators, online status, etc."""
     func_name = getattr(func, "__name__", repr(func))
-    logger.debug(f"Registering onUserUpdate handler: {func_name}")
+    logger.debug(f"Registering on_user_update handler: {func_name}")
     bot.on(events.UserUpdate())(func)
 
 
-def onRaw(func: Callable[..., Any]) -> None:
+def on_raw(func: Callable[..., Any]) -> None:
     """Listen for raw Telegram Update objects. Unabstracted, use as last resort."""
     func_name = getattr(func, "__name__", repr(func))
-    logger.debug(f"Registering onRaw handler: {func_name}")
+    logger.debug(f"Registering on_raw handler: {func_name}")
     bot.on(events.Raw())(func)
 
 
@@ -121,7 +121,7 @@ async def _register_commands() -> None:
                 commands=commands,
             )
         )
-        logger.info(f"Successfully registered {len(commands)} bot commands")
+        logger.info(f"Successfully registered {len(commands)} bot commands.")
     except Exception as e:
         logger.error(f"Error registering bot commands: {e}", exc_info=True)
 
@@ -141,9 +141,17 @@ async def start() -> None:
     # Add Telegram log handler after bot is running, so we can send messages
     logger.debug("Setting up Telegram logging")
     config["log_telegram"] = _setup_tg_log()
+    logger.debug("Setting up extra variables in config")
+    config["is_bot"] = await bot.is_bot()
+    me = cast(types.User, await bot.get_me(input_peer=False))
+    config["user_id"] = str(me.id)
+    # im too tired to figure out falsy
+    config["username"] = me.username if me.username else ""
     logger.debug("Registering bot commands")
     await _register_commands()
-    logger.info("Bot started.")
+    logger.info(
+        f"Bot started as {('@' + config['username']) if config['username'] else config['user_id']}."
+    )
     logger.debug("Waiting for bot to disconnect...")
     await bot.run_until_disconnected()
 
