@@ -47,6 +47,8 @@ def load_secrets():
     logger.debug(f"Telegram API ID: {api_id}, API Hash: {api_hash[:10]}...")
     if bot_token == "NONE" and session_string == "NONE":
         raise ValueError("Either BOT_TOKEN or SESSION_STRING must be provided")
+    elif bot_token != "NONE" and session_string != "NONE":
+        raise ValueError("Only one of BOT_TOKEN or SESSION_STRING must be provided ")
 
 
 # Load data folder path and resolve full paths
