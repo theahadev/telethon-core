@@ -114,8 +114,15 @@ def on_command(func: Callable[..., Any], command: str, catchall: bool = True) ->
     else:
         if catchall:
             # For user accounts, catchall works differently, no username suffix
-            pattern = rf"^{config['trigger_char']}{command}(\s|$)"
-
+            pattern = (
+                rf"^{config['trigger_char']}{command}(@{config['username']})?(\s|$)"
+            )
+        else:
+            # I mean, if they really wanna disable catchall and have manual trigger, let them
+            logger.debug(
+                "User account with catchall disabled: using exact match pattern without username suffix"
+            )
+            pattern = rf"^{config['trigger_char']}{command}@{config['username']}"
     logger.debug(f"Registering on_command handler: {func_name}, command={command}")
     bot.on(events.NewMessage(pattern=pattern))(func)
 
