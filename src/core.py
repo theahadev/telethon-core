@@ -97,13 +97,15 @@ def on_raw(func: Callable[..., Any]) -> None:
 #################################################
 # This is mostly relevant for user accounts, yet won't hurt to have
 # both ways compatibility in bots too.
-def on_command(func: Callable[..., Any], command: str, catchall: bool = False) -> None:
+def on_command(func: Callable[..., Any], command: str, catchall: bool = True) -> None:
     """Listen for messages starting with a specific command trigger character."""
     func_name = getattr(func, "__name__", repr(func))
-    # We need a way to match them seperately because catchall wouldn't work with @botusername suffix
     if catchall:
-        pattern = rf"^{config['trigger_char']}{command}(\s|$)"
+        # Matches both /command and /command@username
+        pattern = rf"^{config['trigger_char']}{command}(@{config['username']})?(\s|$)"
     else:
+        # Matches only /command@username, to avoid conflicts in groups with multiple bots
+        # FIXME: users will be annoyed to use /command@username in pm instead of /command
         pattern = rf"^{config['trigger_char']}{command}@{config['username']}"
     logger.debug(f"Registering on_command handler: {func_name}, command={command}")
     bot.on(events.NewMessage(pattern=pattern))(func)
