@@ -120,11 +120,6 @@ def setup_logging():
     logger.debug("Logging system setup completed.")
 
 
-def import_handlers():
-    logger.debug("Importing event handlers...")
-    import handlers  # noqa: E402, F401
-
-
 def start_loop():
     global bot_token
     logger.debug("Starting TelegramClient with bot token...")
@@ -137,6 +132,7 @@ def start_loop():
 
 
 if __name__ == "__main__":
+    logger.remove()  # Nuke default logger for broken format
     load_dotenv()
     setup_config()
     setup_logging()
@@ -144,5 +140,4 @@ if __name__ == "__main__":
     ensure_path()
     load_secrets()
     init_tg_client()
-    import_handlers()
     start_loop()

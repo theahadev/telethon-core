@@ -97,7 +97,7 @@ def on_raw(func: Callable[..., Any]) -> None:
 #################################################
 # This is mostly relevant for user accounts, yet won't hurt to have
 # both ways compatibility in bots too.
-def on_command(func: Callable[..., Any], command: str, catchall: bool = True) -> None:
+def on_command(command: str, func: Callable[..., Any], catchall: bool = True) -> None:
     """Listen for messages starting with a specific command trigger character."""
     func_name = getattr(func, "__name__", repr(func))
 
@@ -185,6 +185,10 @@ async def start() -> None:
     # Check config for potential issues and log warnings if needed
     logger.debug("Checking configuration for potential issues")
     _check_config()
+    # Loaded extra variables, ready to handlers functions now
+    logger.debug("Importing event handlers...")
+    import handlers  # noqa: E402, F401
+
     logger.debug("Registering bot commands")
     await _register_commands()
     # Log bot start with username or user_id for clarity
@@ -297,17 +301,17 @@ def _setup_stdout_log() -> bool:
         return record["level"].no < 40
 
     # Add stdout handler
-    logger.debug(f"Adding stdout handler with level: {log_level_stdout}")
     logger.add(
         sys.stdout,
         format=_log_format,
         level=log_level_stdout,
         filter=stdout_filter,
     )
+    logger.debug(f"Added stdout handler with level: {log_level_stdout}")
 
     # Add stderr handler
-    logger.debug("Adding stderr handler with level: ERROR")
     logger.add(sys.stderr, format=_log_format, level="ERROR")
+    logger.debug("Added stderr handler with level: ERROR")
     return True
 
 
