@@ -6,7 +6,7 @@ import sys
 
 from loguru import logger
 
-from core import core
+from . import core
 
 
 #################################################

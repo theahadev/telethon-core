@@ -3,7 +3,7 @@ from typing import Any
 from loguru import logger
 from telethon.tl.types import User
 
-from core import core
+from tlcore import core
 
 
 async def addchat_handler(event: Any) -> None:

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from telethon import TelegramClient
 
-from core import bot, core
+from . import bot, core
 
 
 # Raise a clear error on missing keys
@@ -158,7 +158,7 @@ def start_loop():
     logger.debug("TelegramClient context exited.")
 
 
-if __name__ == "__main__":
+def start():
     logger.remove()  # Nuke default logger for broken format
     load_dotenv()
     setup_config()
@@ -168,3 +168,7 @@ if __name__ == "__main__":
     load_secrets()
     init_tg_client()
     start_loop()
+
+
+if __name__ == "__main__":
+    start()

@@ -16,4 +16,4 @@ build-backend = "hatchling.build"
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/core"]
+packages = ["src/tlcore"]

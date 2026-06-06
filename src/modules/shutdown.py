@@ -2,7 +2,7 @@ from typing import Any
 
 from loguru import logger
 
-from core import bot, core
+from tlcore import bot, core
 
 
 async def shutdown_handler(event: Any) -> None:

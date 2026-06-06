@@ -2,7 +2,7 @@ from typing import Any
 
 from loguru import logger
 
-from core import core
+from tlcore import core
 
 
 async def start_handler(event: Any) -> None:
