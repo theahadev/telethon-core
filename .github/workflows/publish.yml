@@ -1,16 +1,15 @@
-# .github/workflows/publish-test.yml
-name: Publish to TestPyPI
+# .github/workflows/publish.yml
+name: Publish to PyPI
 
 on:
   push:
-    branches: [master]
-    paths:
-      - "pyproject.toml"
+    tags:
+      - "v*"
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: testpypi
+    environment: pypi
     permissions:
       id-token: write
 
@@ -19,5 +18,3 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv build
       - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
