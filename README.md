@@ -2,6 +2,8 @@
 
 A modular Telegram bot framework built on [Telethon](https://github.com/LonamiWebs/Telethon) with structured logging, environment-based config, and auto-discovery of handlers.
 
+# Warning: outdated README.
+
 ## Features
 
 - **Modular handlers** - drop a `.py` file in `handlers/` and it's automatically loaded
@@ -47,25 +49,25 @@ Copy `.env.example` to `.env` and fill in your values. Required variables are ma
 
 ### Core
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `API_ID` | ✅ | Telegram API ID from [my.telegram.org](https://my.telegram.org) |
-| `API_HASH` | ✅ | Telegram API Hash |
-| `BOT_TOKEN` | ✅ | Bot token from [@BotFather](https://t.me/botfather) |
-| `DATA_FOLDER` | ✅ | Directory for session file and persistent data |
+| Variable      | Required | Description                                                     |
+| ------------- | -------- | --------------------------------------------------------------- |
+| `API_ID`      | ✅       | Telegram API ID from [my.telegram.org](https://my.telegram.org) |
+| `API_HASH`    | ✅       | Telegram API Hash                                               |
+| `BOT_TOKEN`   | ✅       | Bot token from [@BotFather](https://t.me/botfather)             |
+| `DATA_FOLDER` | ✅       | Directory for session file and persistent data                  |
 
 ### Logging
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LOG_LEVEL_STDOUT` | Console log level | `INFO` |
-| `LOG_LEVEL_FILE` | File log level | `INFO` |
-| `LOG_FILE_PATH` | Path to log file (enables file logging) | — |
-| `LOG_ROTATION` | Log rotation policy (e.g. `500 MB`, `1 week`) | — |
-| `LOG_RETENTION` | Log retention policy (e.g. `1 month`) | — |
-| `LOG_COMPRESSION` | Compression for rotated logs (`gz`, `zip`, etc.) | — |
-| `LOG_CHANNEL` | Telegram channel ID for log forwarding (enables Telegram logging) | — |
-| `LOG_LEVEL_TELEGRAM` | Telegram log level | `INFO` |
+| Variable             | Description                                                       | Default |
+| -------------------- | ----------------------------------------------------------------- | ------- |
+| `LOG_LEVEL_STDOUT`   | Console log level                                                 | `INFO`  |
+| `LOG_LEVEL_FILE`     | File log level                                                    | `INFO`  |
+| `LOG_FILE_PATH`      | Path to log file (enables file logging)                           | —       |
+| `LOG_ROTATION`       | Log rotation policy (e.g. `500 MB`, `1 week`)                     | —       |
+| `LOG_RETENTION`      | Log retention policy (e.g. `1 month`)                             | —       |
+| `LOG_COMPRESSION`    | Compression for rotated logs (`gz`, `zip`, etc.)                  | —       |
+| `LOG_CHANNEL`        | Telegram channel ID for log forwarding (enables Telegram logging) | —       |
+| `LOG_LEVEL_TELEGRAM` | Telegram log level                                                | `INFO`  |
 
 > **Note:** Errors and above always go to stderr regardless of `LOG_LEVEL_STDOUT`. Telegram logging requires `LOG_CHANNEL` to be set.
 
@@ -104,18 +106,18 @@ core.registerCommand("hello", "Say hello")  # optional — queued and sent to Te
 ```
 
 ### Event Wrappers
- 
-| Wrapper | `pattern` arg | Trigger condition |
-|---------|:-------------:|-------------------|
-| `onMessage(func, pattern)` | ✅ | A new message is received |
-| `onEdit(func, pattern)` | ✅ | A message is edited |
-| `onDelete(func)` | ❌ | A message is deleted - only `deleted_id`/`deleted_ids` available, no content |
-| `onRead(func)` | ❌ | Messages are marked as read |
-| `onCallback(func, pattern)` | ✅ | An inline keyboard button is pressed |
-| `onInline(func, pattern)` | ✅ | An inline query is sent (`@yourbot something`) |
-| `onChatAction(func)` | ❌ | A chat action occurs (join, leave, title change, pin, etc.) |
-| `onUserUpdate(func)` | ❌ | A user update occurs (typing indicator, online status, etc.) |
-| `onRaw(func)` | ❌ | Any raw Telegram `Update` object - unabstracted, last resort |
+
+| Wrapper                     | `pattern` arg | Trigger condition                                                            |
+| --------------------------- | :-----------: | ---------------------------------------------------------------------------- |
+| `onMessage(func, pattern)`  |      ✅       | A new message is received                                                    |
+| `onEdit(func, pattern)`     |      ✅       | A message is edited                                                          |
+| `onDelete(func)`            |      ❌       | A message is deleted - only `deleted_id`/`deleted_ids` available, no content |
+| `onRead(func)`              |      ❌       | Messages are marked as read                                                  |
+| `onCallback(func, pattern)` |      ✅       | An inline keyboard button is pressed                                         |
+| `onInline(func, pattern)`   |      ✅       | An inline query is sent (`@yourbot something`)                               |
+| `onChatAction(func)`        |      ❌       | A chat action occurs (join, leave, title change, pin, etc.)                  |
+| `onUserUpdate(func)`        |      ❌       | A user update occurs (typing indicator, online status, etc.)                 |
+| `onRaw(func)`               |      ❌       | Any raw Telegram `Update` object - unabstracted, last resort                 |
 
 ## Bot Commands
 

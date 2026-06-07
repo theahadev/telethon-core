@@ -2,6 +2,11 @@
 
 # Directory for session file and persistent data
 DATA_FOLDER=./data
+DB_NAME
+DB_PATH
+session_name
+trigger_char
+client_type
 
 # ─── Logging: Console ────────────────────────────────────────────────────────
 
