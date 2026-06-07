@@ -1,3 +1,3 @@
-from . import main
+from . import lifecycle
 
-main.start()
+lifecycle.start()

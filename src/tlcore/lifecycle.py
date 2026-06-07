@@ -11,3 +11,7 @@ def start_loop():
         # TODO: bot.start() refers to the old start() function in bot.py, replace it
         state.client.loop.run_until_complete(bot.start())
     logger.debug("TelegramClient context exited.")
+
+
+def start():
+    logger.warning("Stub start() called.")
