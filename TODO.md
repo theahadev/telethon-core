@@ -4,6 +4,7 @@ This is a list of things that i am planning to add to the project in the future.
 
 ## Immediate
 
+- [ ] Finish migration from bot.py and core.py to the more granular system
 - [ ] Implement validate_config() in config.py
 - [ ] Update the bot.start() call in lifecycle.py
 
@@ -17,6 +18,7 @@ This is a list of things that i am planning to add to the project in the future.
 - [ ] Think about storing session string in database for portability and evaluate security implications
 - [ ] Add database backup and restore functionality
 - [ ] Add database migration system for future updates
+- [ ] Add direct SQL query function for complex operations (by [henmalib](https://github.com/henmalib))
 
 ## Docs
 

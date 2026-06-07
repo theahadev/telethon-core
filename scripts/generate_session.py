@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
+# scripts/generate_session.py
 """
 Session String Generator for Telethon Bot
 This script generates a session string for your Telethon bot.
 """
 
+# TODO: add interactive generator with api id/hash inputs, and suggest generating a .env file with moving the old one to .env.bak
+#
 import asyncio
 
 from telethon import TelegramClient

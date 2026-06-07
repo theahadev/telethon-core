@@ -1,3 +1,7 @@
+# lifecycle.py
+#
+# still figuring out the function naming, unstable
+
 from loguru import logger
 
 from . import bot, state
@@ -14,4 +18,15 @@ def start_loop():
 
 
 def start():
+    """Start the process and run until shutdown."""
     logger.warning("Stub start() called.")
+
+
+def shutdown():
+    """Gracefully shut down the process."""
+    logger.warning("Stub shutdown() called.")
+
+
+def restart():
+    """Restart the process by using os.execv()."""
+    logger.warning("Stub restart() called.")

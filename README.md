@@ -4,6 +4,9 @@ A modular Telegram bot framework built on [Telethon](https://github.com/LonamiWe
 
 # Warning: outdated README.
 
+Project philosophy:
+![Project Philosophy image](assets/project-philosophy.webp)
+
 ## Features
 
 - **Modular handlers** - drop a `.py` file in `handlers/` and it's automatically loaded
